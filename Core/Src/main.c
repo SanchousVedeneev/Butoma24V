@@ -48,9 +48,13 @@
 /* USER CODE BEGIN PV */
 
 int16_t shift = 0;
-int16_t low_shift = 5;
-int16_t high_shift= 995;
+int16_t low_shift = 1;
+int16_t high_shift = 999;
 uint8_t upDown = 0; // 0 - Up, 1 - Down
+int16_t shift_discrete = 100;
+
+uint8_t state_button_up = 0;
+uint8_t state_button_down = 0;
 
 /* USER CODE END PV */
 
@@ -104,8 +108,8 @@ int main(void)
 
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_1);
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_2);
-  TIM1->CCR1 = 995;
-  shift = TIM1->CCR1;
+  TIM1->CCR1 = high_shift;
+  shift = high_shift;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -115,27 +119,33 @@ int main(void)
     HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_RESET);
     if (HAL_GPIO_ReadPin(But2_Fall_GPIO_Port,But2_Fall_Pin) == GPIO_PIN_RESET)
     {
-      //HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
-      shift_fim(But2_Fall_Pin);      
+      if (!state_button_up)
+      {
+        HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
+        shift_fim(But2_Fall_Pin); 
+      }
+      state_button_up = 1;
     }
-    // else
-    // {
-    //   HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_RESET);
-    // }
+    else 
+    {
+      state_button_up = 0;
+    }
 
     if (HAL_GPIO_ReadPin(But1_Rise_GPIO_Port,But1_Rise_Pin) == GPIO_PIN_RESET)
     {
-      //HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
-      shift_fim(But1_Rise_Pin);
+      if (!state_button_down)
+      {
+        HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
+        shift_fim(But1_Rise_Pin);
+      }
+      state_button_down = 1;
     }
-    // else
-    // {
-    //   HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_RESET);
-    // }
-
-  HAL_Delay(100);
-
-
+    else
+    {
+      state_button_down = 0;
+    }
+    HAL_Delay(100);
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -229,12 +239,12 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 
 void shift_fim(uint16_t GPIO_Pin)
 {
-  HAL_GPIO_WritePin(BUZZ_GPIO_Port, BUZZ_Pin, GPIO_PIN_SET);
+  
   if (GPIO_Pin == But2_Fall_Pin)
   {
     if (shift > low_shift)
     {
-      shift -= 1;
+      shift -= shift_discrete;
       if (shift <= low_shift)
       {
         shift = low_shift;
@@ -246,15 +256,17 @@ void shift_fim(uint16_t GPIO_Pin)
   {
     if (shift < high_shift)
      {
+      shift += shift_discrete;
       if (shift >= high_shift)
       {
         shift = high_shift;
       }
-      shift += 1;
       TIM1->CCR1 = shift;
      }
   }
 }
+
+
 /*void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
   static uint16_t a = 20;
